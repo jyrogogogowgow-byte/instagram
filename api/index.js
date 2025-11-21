@@ -54,8 +54,7 @@ app.post('/webhook', async (req, res) => {
 
                 try {
                   const reelUrl = attachment.payload.url;
-                  await sendInstagramReel(senderId, reelUrl);
-                  await sendReply(senderId, "✅ تم تحميل الريلز بنجاح");
+                  await sendInstagramReel(senderId, reelUrl); // ✅ الفيديو يُرسل أولاً
                 } catch (err) {
                   await sendReply(senderId, "❌ وقع خطأ أثناء تحميل الريلز.");
                 }
@@ -80,6 +79,7 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(404);
 });
 
+// 📌 قالب تحميل التطبيق
 async function sendGenericTemplate(recipientId) {
   try {
     await axios.post(
@@ -93,28 +93,18 @@ async function sendGenericTemplate(recipientId) {
               template_type: "generic",
               elements: [
                 {
-                  title: "BOT REELS 🔮",
-                  image_url: "https://tse3.mm.bing.net/th/id/OIP.iXKBvwJYAyDkvJ6el5JcnQHaEK?r=0&rs=1&pid=ImgDetMain&o=7&rm=3",
-                  subtitle: "افضل بوت لي تحميل ريلز انستغرام بي ضغطت زر واحدة ",
+                  title: "تحميل التطبيق 📲",
+                  image_url: "https://i.ibb.co/0y84Hvfb/Whats-App-Image-2025-11-21-at-04-11-16.jpg",
+                  subtitle: "تحميل تطبيق لمشاهدة المباريات والقنوات فقط بنجمة ⭐6",
                   default_action: {
                     type: "web_url",
-                    url: "https://www.instagram.com/am_mo111_25_"
+                    url: "https://whatsapp.com/channel/0029VbAgby79sBICj1Eg7h0h/102" // رابط تحميل التطبيق
                   },
                   buttons: [
                     {
                       type: "web_url",
-                      url: "https://www.instagram.com/am_mo111_25_/reel/DLij9OfIjfj/",
-                      title: "شرح البوت 🎈"
-                    },
-                    {
-                      type: "web_url",
-                      url: "https://www.instagram.com/li9ama_simo",
-                      title: "مطور البوت 🎴"
-                    },
-                    {
-                      type: "web_url",
-                      url: "https://whatsapp.com/channel/0029VbAgby79sBICj1Eg7h0h",
-                      title: "📞 WhatsApp Channel"
+                      url: "https://whatsapp.com/channel/0029VbAgby79sBICj1Eg7h0h/102", // رابط تحميل التطبيق
+                      title: "تحميل التطبيق الآن"
                     }
                   ]
                 }
@@ -126,7 +116,7 @@ async function sendGenericTemplate(recipientId) {
       }
     );
 
-    console.log("✅ تم إرسال القالب بنجاح.");
+    console.log("✅ تم إرسال قالب تحميل التطبيق بنجاح.");
   } catch (err) {
     console.error(
       "❌ خطأ في إرسال القالب:",
@@ -135,23 +125,32 @@ async function sendGenericTemplate(recipientId) {
   }
 }
 
+// 📌 إرسال الريلز أولاً ثم قالب التحميل
 async function sendInstagramReel(senderId, url) {
   try {
-    const sendResponse = await axios.post(`https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-      messaging_type: "RESPONSE",
-      recipient: { id: senderId },
-      message: {
-        attachment: {
-          type: "video",
-          payload: { url: url }
+    const sendResponse = await axios.post(
+      `https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
+      {
+        messaging_type: "RESPONSE",
+        recipient: { id: senderId },
+        message: {
+          attachment: {
+            type: "video",
+            payload: { url: url }
+          }
         }
       }
-    });
+    );
 
     if (sendResponse.status === 200) {
       console.log("✅ تم إرسال الفيديو بنجاح.");
-      // 🆕 النشر على صفحة فيسبوك
+      
+      // ➕ بعد نجاح إرسال الفيديو، نرسل القالب
+      await sendGenericTemplate(senderId);
+
+      // ➕ نشر الفيديو على صفحة فيسبوك
       await postVideoToFacebook(url, "📥 لي تحميل رليز بدون تطبيق قوم بي تجربات https://instagram.com/am_mo111_25_ ");
+      
     } else {
       console.log("❌ فشل في إرسال الفيديو.");
       await sendReply(senderId, "❌ حدث خطأ أثناء محاولة إرسال الفيديو.");
@@ -162,6 +161,7 @@ async function sendInstagramReel(senderId, url) {
   }
 }
 
+// 📌 إرسال رسالة نصية
 async function sendReply(recipientId, messageText) {
   try {
     await axios.post(`https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
@@ -174,7 +174,7 @@ async function sendReply(recipientId, messageText) {
   }
 }
 
-// 🆕 دالة نشر الفيديو على فيسبوك
+// 🆕 نشر الفيديو على فيسبوك
 async function postVideoToFacebook(videoUrl, caption = "📲 فيديو تم تحميله تلقائياً") {
   try {
     const response = await axios.post(

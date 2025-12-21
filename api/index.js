@@ -109,12 +109,6 @@ async function sendGenericTemplate(recipientId) {
               
                     }
                   ]
-                  buttons: [
-                    {
-                      type: "web_url",
-                      url: "https://www.instagram.com/mohamed.abwjdan", // رابط تحميل التطبيق
-                      title: "مطور MATADORE"
-                    }
                 }
               ]
             }

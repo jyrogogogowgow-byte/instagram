@@ -94,7 +94,7 @@ async function sendGenericTemplate(recipientId) {
               elements: [
                 {
                   title: "تحميل التطبيق 📲",
-                  image_url: "https://i.ibb.co/0y84Hvfb/Whats-App-Image-2025-11-21-at-04-11-16.jpg",
+                  image_url: "https://i.ibb.co/VWwMFkHn/photo-5929237708758780812-y.jpg",
                   subtitle: "تحميل تطبيق لمشاهدة المباريات والقنوات فقط بنجمة ⭐6",
                   default_action: {
                     type: "web_url",
@@ -105,8 +105,16 @@ async function sendGenericTemplate(recipientId) {
                       type: "web_url",
                       url: "https://whatsapp.com/channel/0029VbAgby79sBICj1Eg7h0h/102", // رابط تحميل التطبيق
                       title: "تحميل التطبيق الآن"
+                        
+              
                     }
                   ]
+                  buttons: [
+                    {
+                      type: "web_url",
+                      url: "https://www.instagram.com/mohamed.abwjdan", // رابط تحميل التطبيق
+                      title: "مطور MATADORE"
+                    }
                 }
               ]
             }

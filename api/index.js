@@ -1,208 +1,167 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const axios = require('axios');
-require('dotenv').config();
+const express = require("express");
+const bodyParser = require("body-parser");
+const axios = require("axios");
+require("dotenv").config();
+
+const { get, set } = require("@vercel/edge-config");
 
 const app = express();
 app.use(bodyParser.json());
 
+// ================== CONFIG ==================
 const PAGE_ACCESS_TOKEN = "IGAAKBNjRZBjsNBZAFppXzVwQzRLcHhlUnhLa0JvaXpaWWxHaGNHNEIzeHJhak1uZAnV0aEQ3UkVQMXVvZAndDVFZAjeDU0dWtoZAjQ5aER5b1djZAG9SZAktXLU9LNnhBRlhpUXZATOFBBMzRTREN6bW5YUWFicUpnR3dGd1JOekxVOWduQQZDZD";
 const VERIFY_TOKEN = "ABCD123224";
 
-// 🔵 إعدادات فيسبوك
-const FACEBOOK_PAGE_ID = "225597157303578";
-const FACEBOOK_PAGE_ACCESS_TOKEN = "EAAHa6OnUvf8BPTNccoszJ4xxXlwZAY3qGaN8yLWRHCrL7hmctM6mM6NWbu5LIFtQPcQU9jCNsi1prFp9DIlwSVbNSzZAxLeafXjVDZAUvZCea0Tu8Nzx897JyJT4mCm4wDJTIvcqICplk7ZBeUAQzsgLZBAbxce4ZCXK5dJpfrCy7mtNVZA5NfJw8B7ZAEiO7DYEWvjuFL7AZD";
 
-app.get('/webhook', (req, res) => {
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
+const INSTAGRAM_PROFILE_URL = "https://instagram.com/am_mo111_25_";
 
-  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-    console.log('✅ Webhook verified');
+// ============================================
+
+// 🔐 Check user
+async function isUserAllowed(userId) {
+  const users = (await get("allowedUsers")) || [];
+  return users.includes(userId);
+}
+
+// 💾 Save user
+async function saveUser(userId) {
+  const users = (await get("allowedUsers")) || [];
+  if (!users.includes(userId)) {
+    users.push(userId);
+    await set("allowedUsers", users);
+  }
+}
+
+// 📩 Text message
+async function sendReply(recipientId, text) {
+  await axios.post(
+    `https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
+    {
+      recipient: { id: recipientId },
+      messaging_type: "RESPONSE",
+      message: { text }
+    }
+  );
+}
+
+// 🔔 Follow template
+async function sendFollowTemplate(recipientId) {
+  await axios.post(
+    `https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
+    {
+      recipient: { id: recipientId },
+      messaging_type: "RESPONSE",
+      message: {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "generic",
+            elements: [
+              {
+                title: "⚠️ خاصك تتابع الحساب",
+                subtitle: "تابع الحساب باش تقدر تستعمل البوت",
+                buttons: [
+                  {
+                    type: "web_url",
+                    url: INSTAGRAM_PROFILE_URL,
+                    title: "✅ متابعة"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  );
+}
+
+// 📦 Main template
+async function sendGenericTemplate(recipientId) {
+  await axios.post(
+    `https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
+    {
+      recipient: { id: recipientId },
+      messaging_type: "RESPONSE",
+      message: {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "generic",
+            elements: [
+              {
+                title: "📲 تحميل التطبيق",
+                subtitle: "اضغط هنا لتحميل التطبيق",
+                buttons: [
+                  {
+                    type: "web_url",
+                    url: "https://whatsapp.com/channel/0029VbAgby79sBICj1Eg7h0h/102",
+                    title: "تحميل الآن"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  );
+}
+
+// ================== WEBHOOK ==================
+
+app.get("/webhook", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (mode === "subscribe" && token === VERIFY_TOKEN) {
     return res.status(200).send(challenge);
   }
-
   res.sendStatus(403);
 });
 
-app.post('/webhook', async (req, res) => {
-  console.log("📦 Payload:", JSON.stringify(req.body, null, 2));
+app.post("/webhook", async (req, res) => {
+  if (req.body.object !== "instagram") return res.sendStatus(404);
 
-  if (req.body.object === 'instagram') {
-    req.body.entry.forEach(entry => {
-      if (entry.messaging) {
-        entry.messaging.forEach(async (event) => {
-          const senderId = event.sender && event.sender.id;
-          const messageId = event.message && event.message.mid;
+  for (const entry of req.body.entry) {
+    if (!entry.messaging) continue;
 
-          if (!senderId) return;
+    for (const event of entry.messaging) {
+      const senderId = event.sender?.id;
+      if (!senderId) continue;
 
-          if (event.message && event.message.text) {
+      // 📩 Text message
+      if (event.message?.text) {
+        const text = event.message.text.trim();
+
+        const allowed = await isUserAllowed(senderId);
+
+        // ❌ not allowed
+        if (!allowed) {
+          if (text === "تم") {
+            await saveUser(senderId);
+            await sendReply(senderId, "✅ مرحباً! دابا تقدر تستعمل البوت.");
             await sendGenericTemplate(senderId);
-            return;
+            continue;
           }
 
-          if (event.message && event.message.attachments) {
-            let reelFound = false;
+          await sendFollowTemplate(senderId);
+          await sendReply(senderId, "📌 من بعد المتابعة كتب: تم");
+          continue;
+        }
 
-            for (const attachment of event.message.attachments) {
-              if (attachment.type === 'ig_reel' && attachment.payload && attachment.payload.url) {
-                reelFound = true;
-
-                await sendReply(senderId, "⏳ يتم تحميل ريلز...");
-
-                try {
-                  const reelUrl = attachment.payload.url;
-                  await sendInstagramReel(senderId, reelUrl); // ✅ الفيديو يُرسل أولاً
-                } catch (err) {
-                  await sendReply(senderId, "❌ وقع خطأ أثناء تحميل الريلز.");
-                }
-
-                return;
-              }
-            }
-
-            if (!reelFound) {
-              await sendReply(senderId, "🚨 المرفق غير مدعوم. يُرجى إرسال مقطع ريلز فقط.");
-            }
-          } else {
-            await sendReply(senderId, "📩 يُرجى إرسال مقطع ريلز ليتم تحميله.");
-          }
-        });
+        // ✅ allowed
+        await sendGenericTemplate(senderId);
       }
-    });
-
-    return res.sendStatus(200);
+    }
   }
 
-  res.sendStatus(404);
+  res.sendStatus(200);
 });
 
-// 📌 قالب تحميل التطبيق
-async function sendGenericTemplate(recipientId) {
-  try {
-    await axios.post(
-      `https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
-      {
-        recipient: { id: recipientId },
-        message: {
-          attachment: {
-            type: "template",
-            payload: {
-              template_type: "generic",
-              elements: [
-                {
-                  title: "تحميل التطبيق 📲",
-                  image_url: "https://i.ibb.co/VWwMFkHn/photo-5929237708758780812-y.jpg",
-                  subtitle: "تحميل تطبيق لمشاهدة المباريات والقنوات فقط بنجمة ⭐6",
-                  default_action: {
-                    type: "web_url",
-                    url: "https://whatsapp.com/channel/0029VbAgby79sBICj1Eg7h0h/102" // رابط تحميل التطبيق
-                  },
-                  buttons: [
-                    {
-                      type: "web_url",
-                      url: "https://whatsapp.com/channel/0029VbAgby79sBICj1Eg7h0h/102", // رابط تحميل التطبيق
-                      title: "تحميل التطبيق الآن"
-                        
-              
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        },
-        messaging_type: "RESPONSE"
-      }
-    );
-
-    console.log("✅ تم إرسال قالب تحميل التطبيق بنجاح.");
-  } catch (err) {
-    console.error(
-      "❌ خطأ في إرسال القالب:",
-      err.response ? err.response.data : err.message
-    );
-  }
-}
-
-// 📌 إرسال الريلز أولاً ثم قالب التحميل
-async function sendInstagramReel(senderId, url) {
-  try {
-    const sendResponse = await axios.post(
-      `https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
-      {
-        messaging_type: "RESPONSE",
-        recipient: { id: senderId },
-        message: {
-          attachment: {
-            type: "video",
-            payload: { url: url }
-          }
-        }
-      }
-    );
-
-    if (sendResponse.status === 200) {
-      console.log("✅ تم إرسال الفيديو بنجاح.");
-      
-      // ➕ بعد نجاح إرسال الفيديو، نرسل القالب
-      await sendGenericTemplate(senderId);
-
-      // ➕ نشر الفيديو على صفحة فيسبوك
-      await postVideoToFacebook(url, "📥 لي تحميل رليز بدون تطبيق قوم بي تجربات https://instagram.com/am_mo111_25_ ");
-      
-    } else {
-      console.log("❌ فشل في إرسال الفيديو.");
-      await sendReply(senderId, "❌ حدث خطأ أثناء محاولة إرسال الفيديو.");
-    }
-  } catch (error) {
-    console.error("❌ خطأ في إرسال الفيديو:", error.message);
-    await sendReply(senderId, "❌ وقع خطأ أثناء محاولة إرسال الفيديو. حاول مرة أخرى.");
-  }
-}
-
-// 📌 إرسال رسالة نصية
-async function sendReply(recipientId, messageText) {
-  try {
-    await axios.post(`https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-      recipient: { id: recipientId },
-      message: { text: messageText },
-      messaging_type: "RESPONSE"
-    });
-  } catch (err) {
-    console.error("❌ فشل في إرسال الرسالة:", err.response ? err.response.data : err.message);
-  }
-}
-
-// 🆕 نشر الفيديو على فيسبوك
-async function postVideoToFacebook(videoUrl, caption = "📲 فيديو تم تحميله تلقائياً") {
-  try {
-    const response = await axios.post(
-      `https://graph.facebook.com/${FACEBOOK_PAGE_ID}/videos`,
-      new URLSearchParams({
-        file_url: videoUrl,
-        description: caption,
-        access_token: FACEBOOK_PAGE_ACCESS_TOKEN
-      }),
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      }
-    );
-
-    if (response.data && response.data.id) {
-      console.log("✅ تم نشر الفيديو على الصفحة بنجاح. Video ID:", response.data.id);
-    } else {
-      console.log("⚠️ تم إرسال الطلب ولكن ما تمش النشر.");
-    }
-  } catch (err) {
-    console.error("❌ خطأ أثناء نشر الفيديو على صفحة فيسبوك:", err.response ? err.response.data : err.message);
-  }
-}
+// ============================================
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log('🚀 Instagram bot running...');
+  console.log("🚀 Instagram bot running on Vercel");
 });

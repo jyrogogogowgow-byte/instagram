@@ -3,53 +3,86 @@ const bodyParser = require("body-parser");
 const axios = require("axios");
 require("dotenv").config();
 
-const { get, set } = require("@vercel/edge-config");
-
 const app = express();
 app.use(bodyParser.json());
 
-// ================== CONFIG ==================
+// ================= CONFIG =================
 const PAGE_ACCESS_TOKEN = "IGAAKBNjRZBjsNBZAFppXzVwQzRLcHhlUnhLa0JvaXpaWWxHaGNHNEIzeHJhak1uZAnV0aEQ3UkVQMXVvZAndDVFZAjeDU0dWtoZAjQ5aER5b1djZAG9SZAktXLU9LNnhBRlhpUXZATOFBBMzRTREN6bW5YUWFicUpnR3dGd1JOekxVOWduQQZDZD";
 const VERIFY_TOKEN = "ABCD123224";
 
 
+ EDGE_CONFIG_TOKEN = "b0087761-db31-4552-809b-d0966e37c0be";
+EDGE_CONFIG_ID = "ecfg_xhxmsvazo3rzwucxuji0i4g0v4ch";
 const INSTAGRAM_PROFILE_URL = "https://instagram.com/am_mo111_25_";
 
-// ============================================
+// =========================================
 
-// 🔐 Check user
+// 🧠 Edge Config helpers (REST API)
+async function getAllowedUsers() {
+  const res = await axios.get(
+    `https://api.vercel.com/v1/edge-config/${EDGE_CONFIG_ID}/items`,
+    {
+      headers: {
+        Authorization: `Bearer ${EDGE_CONFIG_TOKEN}`
+      }
+    }
+  );
+
+  const item = res.data.items.find(i => i.key === "allowedUsers");
+  return item ? item.value : [];
+}
+
+async function saveAllowedUsers(users) {
+  await axios.patch(
+    `https://api.vercel.com/v1/edge-config/${EDGE_CONFIG_ID}/items`,
+    {
+      items: [
+        {
+          key: "allowedUsers",
+          value: users
+        }
+      ]
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${EDGE_CONFIG_TOKEN}`,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+}
+
 async function isUserAllowed(userId) {
-  const users = (await get("allowedUsers")) || [];
+  const users = await getAllowedUsers();
   return users.includes(userId);
 }
 
-// 💾 Save user
-async function saveUser(userId) {
-  const users = (await get("allowedUsers")) || [];
+async function addUser(userId) {
+  const users = await getAllowedUsers();
   if (!users.includes(userId)) {
     users.push(userId);
-    await set("allowedUsers", users);
+    await saveAllowedUsers(users);
   }
 }
 
-// 📩 Text message
-async function sendReply(recipientId, text) {
+// 📩 إرسال رسالة نصية
+async function sendReply(id, text) {
   await axios.post(
     `https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
     {
-      recipient: { id: recipientId },
+      recipient: { id },
       messaging_type: "RESPONSE",
       message: { text }
     }
   );
 }
 
-// 🔔 Follow template
-async function sendFollowTemplate(recipientId) {
+// 🔔 قالب المتابعة
+async function sendFollowTemplate(id) {
   await axios.post(
     `https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
     {
-      recipient: { id: recipientId },
+      recipient: { id },
       messaging_type: "RESPONSE",
       message: {
         attachment: {
@@ -76,12 +109,12 @@ async function sendFollowTemplate(recipientId) {
   );
 }
 
-// 📦 Main template
-async function sendGenericTemplate(recipientId) {
+// 📦 قالب الخدمة
+async function sendGenericTemplate(id) {
   await axios.post(
     `https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
     {
-      recipient: { id: recipientId },
+      recipient: { id },
       messaging_type: "RESPONSE",
       message: {
         attachment: {
@@ -108,7 +141,7 @@ async function sendGenericTemplate(recipientId) {
   );
 }
 
-// ================== WEBHOOK ==================
+// ================= WEBHOOK =================
 
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
@@ -131,27 +164,26 @@ app.post("/webhook", async (req, res) => {
       const senderId = event.sender?.id;
       if (!senderId) continue;
 
-      // 📩 Text message
       if (event.message?.text) {
         const text = event.message.text.trim();
 
         const allowed = await isUserAllowed(senderId);
 
-        // ❌ not allowed
+        // ❌ ما تابعش
         if (!allowed) {
           if (text === "تم") {
-            await saveUser(senderId);
+            await addUser(senderId);
             await sendReply(senderId, "✅ مرحباً! دابا تقدر تستعمل البوت.");
             await sendGenericTemplate(senderId);
             continue;
           }
 
           await sendFollowTemplate(senderId);
-          await sendReply(senderId, "📌 من بعد المتابعة كتب: تم");
+          await sendReply(senderId, "📌 من بعد المتابعة رجع وكتب: تم");
           continue;
         }
 
-        // ✅ allowed
+        // ✅ تابع
         await sendGenericTemplate(senderId);
       }
     }
@@ -160,8 +192,8 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
-// ============================================
+// ==========================================
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log("🚀 Instagram bot running on Vercel");
+  console.log("🚀 Instagram bot running");
 });

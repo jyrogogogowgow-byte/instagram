@@ -6,12 +6,12 @@ require('dotenv').config();
 const app = express();
 app.use(bodyParser.json());
 
-const PAGE_ACCESS_TOKEN = "IGAAKBNjRZBjsNBZAFppXzVwQzRLcHhlUnhLa0JvaXpaWWxHaGNHNEIzeHJhak1uZAnV0aEQ3UkVQMXVvZAndDVFZAjeDU0dWtoZAjQ5aER5b1djZAG9SZAktXLU9LNnhBRlhpUXZATOFBBMzRTREN6bW5YUWFicUpnR3dGd1JOekxVOWduQQZDZD";
+const PAGE_ACCESS_TOKEN = "IGAARWboxCWU1BZAFpqYTVyOFFHcTlLd3dKcEVZAWTlORU1DRjBsQXAyREk0VDdRZAnpJajM2TU4wN2gyRUoyRlFhdEQ5NUYtNGl6TDM4cjdTbzRzemhBR213MzktS3F0RVhQZAlVlSHQ1a1dDTWlaLXNKdC1YVm9fWXF2Q0ZAFbnktbwZDZD";
 const VERIFY_TOKEN = "ABCD123224";
 
 // 🔵 إعدادات فيسبوك
-const FACEBOOK_PAGE_ID = "225597157303578";
-const FACEBOOK_PAGE_ACCESS_TOKEN = "EAAHa6OnUvf8BPTNccoszJ4xxXlwZAY3qGaN8yLWRHCrL7hmctM6mM6NWbu5LIFtQPcQU9jCNsi1prFp9DIlwSVbNSzZAxLeafXjVDZAUvZCea0Tu8Nzx897JyJT4mCm4wDJTIvcqICplk7ZBeUAQzsgLZBAbxce4ZCXK5dJpfrCy7mtNVZA5NfJw8B7ZAEiO7DYEWvjuFL7AZD";
+const FACEBOOK_PAGE_ID = "";
+const FACEBOOK_PAGE_ACCESS_TOKEN = "";
 
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
@@ -93,18 +93,18 @@ async function sendGenericTemplate(recipientId) {
               template_type: "generic",
               elements: [
                 {
-                  title: "تحميل التطبيق 📲",
-                  image_url: "https://i.ibb.co/VWwMFkHn/photo-5929237708758780812-y.jpg",
-                  subtitle: "تحميل تطبيق لمشاهدة المباريات والقنوات فقط بنجمة ⭐6",
+                  title: " مطور البوت 📲",
+                  image_url: "https://i.ibb.co/TBPXVL2K/photo-5872718112396872742-x.jpg",
+                  subtitle: "تواصل مع مطور البوت فحال  توقف 🛑 ",
                   default_action: {
                     type: "web_url",
-                    url: "https://whatsapp.com/channel/0029VbAgby79sBICj1Eg7h0h/102" // رابط تحميل التطبيق
+                    url: "https://wa.me/message/VTOVK35COW4RG1" // رابط تحميل التطبيق
                   },
                   buttons: [
                     {
                       type: "web_url",
-                      url: "https://whatsapp.com/channel/0029VbAgby79sBICj1Eg7h0h/102", // رابط تحميل التطبيق
-                      title: "تحميل التطبيق الآن"
+                      url: "https://wa.me/message/VTOVK35COW4RG1", // رابط تحميل التطبيق
+                      title: "تواصل"
                         
               
                     }

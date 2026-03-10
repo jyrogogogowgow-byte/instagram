@@ -7,7 +7,7 @@ const app = express();
 app.use(bodyParser.json());
 
 const PAGE_ACCESS_TOKEN = "IGAARWboxCWU1BZAFpqYTVyOFFHcTlLd3dKcEVZAWTlORU1DRjBsQXAyREk0VDdRZAnpJajM2TU4wN2gyRUoyRlFhdEQ5NUYtNGl6TDM4cjdTbzRzemhBR213MzktS3F0RVhQZAlVlSHQ1a1dDTWlaLXNKdC1YVm9fWXF2Q0ZAFbnktbwZDZD";
-const VERIFY_TOKEN = "ABCD123224";
+const VERIFY_TOKEN = "ABCD1211113224";
 
 // 🔵 إعدادات فيسبوك
 const FACEBOOK_PAGE_ID = "";

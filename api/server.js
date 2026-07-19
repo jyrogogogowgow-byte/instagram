@@ -6,38 +6,42 @@ require('dotenv').config();
 const app = express();
 app.use(bodyParser.json());
 
-const PAGE_ACCESS_TOKEN = "IGAAYDbM8KbPFBZAFlZANGFJekpfYVNHNlhRVFNMMG1IRlQ2VFN2RW1PbS1vZAVh5UUE3NHZAVeGFvc0lVRWxkaV9xT2JNQjFab3gxSWNkd0FNSXo0dzQwMnRfb1psd3RqT3N3U3lsT2dTT2hEYWYzU1VRZAmMwNlRFQWkxUmhqUXBzawZDZD";
-const VERIFY_TOKEN = "ABCD1234";
+const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN || "IGAAYDbM8KbPFBZAFlZANGFJekpfYVNHNlhRVFNMMG1IRlQ2VFN2RW1PbS1vZAVh5UUE3NHZAVeGFvc0lVRWxkaV9xT2JNQjFab3gxSWNkd0FNSXo0dzQwMnRfb1psd3RqT3N3U3lsT2dTT2hEYWYzU1VRZAmMwNlRFQWkxUmhqUXBzawZDZD";
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "ABCD1234";
 
 const FACEBOOK_PAGE_ID = process.env.FACEBOOK_PAGE_ID || "";
 const FACEBOOK_PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN || "";
 
-// 🛠️ دالة جلب الرابط المباشر باستخدام منطق DownloadGram
-async function getMediaDirectUrl(url) {
+// 🛠️ دالة جلب الرابط المباشر بنفس منطق Python الخاص بك
+async function getMediaDirectUrl(reelUrl) {
   try {
-    const response = await axios.post('https://api.downloadgram.org/media', {
-      url: url,
-      v: "3",
-      lang: "en"
-    }, {
-      headers: {
-        'Referer': 'https://downloadgram.org/',
-        'Content-Type': 'application/json'
-      }
-    });
-
-    // تحويل الرد إلى نص للبحث عن الرابط بداخله
-    const responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+    const url = "https://api.downloadgram.org/media";
     
-    // استخدام Regex لاستخراج الرابط الموجود داخل href
-    const match = responseText.match(/href=\\"(https:\/\/([^\\"]+))/);
+    const data = {
+      "url": reelUrl,
+      "v": "3",
+      "lang": "en"
+    };
+
+    const headers = {
+      "Referer": "https://downloadgram.org/",
+      "Content-Type": "application/x-www-form-urlencoded"
+    };
+
+    const response = await axios.post(url, new URLSearchParams(data).toString(), { headers });
+    const text = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+
+    // نفس الـ Regex الخاص بك
+    const match = text.match(/href=\\x22(https:\/\/[^\\"]+)/);
 
     if (match && match[1]) {
-      return match[1]; // هذا هو رابط الفيديو المباشر
+      return match[1];
+    } else {
+      console.log("❌ لم يتم العثور على الرابط");
+      return null;
     }
-    return null;
   } catch (error) {
-    console.error("❌ خطأ في DownloadGram API:", error.message);
+    console.error("❌ خطأ في الاتصال بـ DownloadGram:", error.message);
     return null;
   }
 }
@@ -82,17 +86,15 @@ app.post('/webhook', async (req, res) => {
                   if (directUrl) {
                     await sendInstagramReel(senderId, directUrl); 
                   } else {
-                    await sendReply(senderId, "❌ عذراً، لم أتمكن من جلب هذا المقطع (قد يكون الحساب خاصاً أو الرابط غير مدعوم).");
+                    await sendReply(senderId, "❌ عذراً، لم أتمكن من جلب هذا المقطع.");
                   }
                 } catch (err) {
-                  await sendReply(senderId, "❌ وقع خطأ غير متوقع أثناء تحميل الريلز.");
+                  await sendReply(senderId, "❌ وقع خطأ غير متوقع.");
                 }
                 break;
               }
             }
-            if (!reelFound) {
-              await sendReply(senderId, "🚨 المرفق غير مدعوم. يُرجى إرسال مقطع ريلز فقط.");
-            }
+            if (!reelFound) await sendReply(senderId, "🚨 المرفق غير مدعوم.");
           }
         }
       }
@@ -100,9 +102,7 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// بقية الدوال (sendGenericTemplate, sendInstagramReel, sendReply, postVideoToFacebook) تظل كما هي في كودك الأصلي
-// لا تنسَ إضافة module.exports = app; في نهاية الملف
-
+// --- بقية الدوال ---
 async function sendGenericTemplate(recipientId) {
   try {
     await axios.post(`https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
@@ -124,7 +124,7 @@ async function sendGenericTemplate(recipientId) {
       },
       messaging_type: "RESPONSE"
     });
-  } catch (err) { console.error("❌ خطأ في إرسال القالب:", err.message); }
+  } catch (err) { console.error("❌ خطأ:", err.message); }
 }
 
 async function sendInstagramReel(senderId, url) {
@@ -150,7 +150,7 @@ async function sendReply(recipientId, messageText) {
       message: { text: messageText },
       messaging_type: "RESPONSE"
     });
-  } catch (err) { console.error("❌ فشل في إرسال الرسالة:", err.message); }
+  } catch (err) { console.error("❌ فشل:", err.message); }
 }
 
 async function postVideoToFacebook(videoUrl, caption) {
@@ -160,7 +160,7 @@ async function postVideoToFacebook(videoUrl, caption) {
       description: caption,
       access_token: FACEBOOK_PAGE_ACCESS_TOKEN
     }), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-  } catch (err) { console.error("❌ خطأ أثناء النشر على فيسبوك:", err.message); }
+  } catch (err) { console.error("❌ خطأ نشر فيسبوك:", err.message); }
 }
 
 module.exports = app;

@@ -1,7 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const cheerio = require('cheerio'); // نحتاج مكتبة cheerio لاستخراج التوكن
 require('dotenv').config();
 
 const app = express();

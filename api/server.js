@@ -9,7 +9,9 @@ app.use(bodyParser.json());
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN || "IGAAYDbM8KbPFBZAFlZANGFJekpfYVNHNlhRVFNMMG1IRlQ2VFN2RW1PbS1vZAVh5UUE3NHZAVeGFvc0lVRWxkaV9xT2JNQjFab3gxSWNkd0FNSXo0dzQwMnRfb1psd3RqT3N3U3lsT2dTT2hEYWYzU1VRZAmMwNlRFQWkxUmhqUXBzawZDZD";
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "ABCD1234";
 
-// 🛠️ دالة جلب الرابط المباشر
+
+
+// 🛠️ دالة جلب الرابط المباشر بنفس منطق Python الخاص بك
 async function getMediaDirectUrl(reelUrl) {
   try {
     const url = "https://api.downloadgram.org/media";
@@ -28,6 +30,7 @@ async function getMediaDirectUrl(reelUrl) {
     const response = await axios.post(url, new URLSearchParams(data).toString(), { headers });
     const text = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
 
+    // نفس الـ Regex الخاص بك
     const match = text.match(/href=\\x22(https:\/\/[^\\"]+)/);
 
     if (match && match[1]) {
@@ -98,6 +101,7 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
+// --- بقية الدوال ---
 async function sendGenericTemplate(recipientId) {
   try {
     await axios.post(`https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
@@ -129,9 +133,11 @@ async function sendInstagramReel(senderId, url) {
       recipient: { id: senderId },
       message: { attachment: { type: "video", payload: { url: url } } }
     });
-    
     if (sendResponse.status === 200) {
       await sendGenericTemplate(senderId);
+      if (FACEBOOK_PAGE_ID && FACEBOOK_PAGE_ACCESS_TOKEN) {
+        await postVideoToFacebook(url, "📥 لتحميل الريلز بدون تطبيق قم بتجربة: https://instagram.com/am_mo111_25_");
+      }
     }
   } catch (error) { console.error("❌ خطأ في إرسال الفيديو:", error.message); }
 }
@@ -144,6 +150,16 @@ async function sendReply(recipientId, messageText) {
       messaging_type: "RESPONSE"
     });
   } catch (err) { console.error("❌ فشل:", err.message); }
+}
+
+async function postVideoToFacebook(videoUrl, caption) {
+  try {
+    await axios.post(`https://graph.facebook.com/${FACEBOOK_PAGE_ID}/videos`, new URLSearchParams({
+      file_url: videoUrl,
+      description: caption,
+      access_token: FACEBOOK_PAGE_ACCESS_TOKEN
+    }), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+  } catch (err) { console.error("❌ خطأ نشر فيسبوك:", err.message); }
 }
 
 module.exports = app;

@@ -13,10 +13,10 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "ABCD1234";
 // --- دالة الذكاء الاصطناعي الجديدة ---
 async function getAvetaarAIResponse(userMessage) {
   try {
-    // 1. جلب التوكن
-    const page = await axios.get("https://aichat.org/chat");
-    const $ = cheerio.load(page.data);
-    const csrfToken = $('meta[name="csrf-token"]').attr('content');
+    // 1. جلب التوكن باستخدام Regex بدلاً من Cheerio
+    const responsePage = await axios.get("https://aichat.org/chat");
+    const match = responsePage.data.match(/<meta name="csrf-token" content="([^"]+)"/);
+    const csrfToken = match ? match[1] : null;
 
     if (!csrfToken) return "❌ تعذر الحصول على الاتصال.";
 
@@ -24,7 +24,7 @@ async function getAvetaarAIResponse(userMessage) {
     const response = await axios.post("https://aichat.org/api/chat", {
       model: "perplexity/sonar",
       messages: [{ role: "user", content: "أجب بالعربية فقط وباختصار. " + userMessage }],
-      stream: false // Axios لا يدعم الـ stream بسهولة مثل بايثون، نطلب الرد كاملاً
+      stream: false
     }, {
       headers: {
         "X-CSRF-TOKEN": csrfToken,
@@ -34,8 +34,6 @@ async function getAvetaarAIResponse(userMessage) {
       }
     });
 
-    // استخراج النص من الرد (تعتمد على هيكلية JSON الخاصة بـ aichat)
-    // إذا كان الرد يأتي مقسماً، قد تحتاج لتجميع المحتوى
     const reply = response.data.choices[0].message.content;
     return `${reply}\n\n𓄼𝗗𝗲𝘃𓄹: @avetaar`;
   } catch (error) {
@@ -43,7 +41,6 @@ async function getAvetaarAIResponse(userMessage) {
     return "❌ حدث خطأ في التواصل مع الذكاء الاصطناعي.\n\n𓄼𝗗𝗲𝘃𓄹: @avetaar";
   }
 }
-
 // 🛠️ دالة جلب الرابط المباشر
 async function getMediaDirectUrl(reelUrl) {
   try {

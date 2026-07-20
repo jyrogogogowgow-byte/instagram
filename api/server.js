@@ -9,80 +9,88 @@ app.use(bodyParser.json());
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN || "IGAAYDbM8KbPFBZAFlZANGFJekpfYVNHNlhRVFNMMG1IRlQ2VFN2RW1PbS1vZAVh5UUE3NHZAVeGFvc0lVRWxkaV9xT2JNQjFab3gxSWNkd0FNSXo0dzQwMnRfb1psd3RqT3N3U3lsT2dTT2hEYWYzU1VRZAmMwNlRFQWkxUmhqUXBzawZDZD";
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "ABCD1234";
 
-// --- دالة الذكاء الاصطناعي الجديدة ---
-async function getAvetaarAIResponse(userMessage) {
-  try {
-    // 1. جلب التوكن باستخدام Regex بدلاً من Cheerio
-    const responsePage = await axios.get("https://aichat.org/chat");
-    const match = responsePage.data.match(/<meta name="csrf-token" content="([^"]+)"/);
-    const csrfToken = match ? match[1] : null;
-
-    if (!csrfToken) return "❌ تعذر الحصول على الاتصال.";
-
-    // 2. إرسال السؤال
-    const response = await axios.post("https://aichat.org/api/chat", {
-      model: "perplexity/sonar",
-      messages: [{ role: "user", content: "أجب بالعربية فقط وباختصار. " + userMessage }],
-      stream: false
-    }, {
-      headers: {
-        "X-CSRF-TOKEN": csrfToken,
-        "Content-Type": "application/json",
-        "Referer": "https://aichat.org/chat",
-        "User-Agent": "Mozilla/5.0"
-      }
-    });
-
-    const reply = response.data.choices[0].message.content;
-    return `${reply}\n\n𓄼𝗗𝗲𝘃𓄹: @avetaar`;
-  } catch (error) {
-    console.error("❌ خطأ AI:", error.message);
-    return "❌ حدث خطأ في التواصل مع الذكاء الاصطناعي.\n\n𓄼𝗗𝗲𝘃𓄹: @avetaar";
-  }
-}
 // 🛠️ دالة جلب الرابط المباشر
 async function getMediaDirectUrl(reelUrl) {
   try {
-    const response = await axios.post("https://api.downloadgram.org/media", new URLSearchParams({ url: reelUrl, v: "3", lang: "en" }).toString(), {
-      headers: { "Referer": "https://downloadgram.org/", "Content-Type": "application/x-www-form-urlencoded" }
-    });
-    const match = response.data.match(/href=\\x22(https:\/\/[^\\"]+)/);
-    return match ? match[1] : null;
-  } catch (error) { return null; }
+    const url = "https://api.downloadgram.org/media";
+    
+    const data = {
+      "url": reelUrl,
+      "v": "3",
+      "lang": "en"
+    };
+
+    const headers = {
+      "Referer": "https://downloadgram.org/",
+      "Content-Type": "application/x-www-form-urlencoded"
+    };
+
+    const response = await axios.post(url, new URLSearchParams(data).toString(), { headers });
+    const text = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+
+    const match = text.match(/href=\\x22(https:\/\/[^\\"]+)/);
+
+    if (match && match[1]) {
+      return match[1];
+    } else {
+      console.log("❌ لم يتم العثور على الرابط");
+      return null;
+    }
+  } catch (error) {
+    console.error("❌ خطأ في الاتصال بـ DownloadGram:", error.message);
+    return null;
+  }
 }
 
 app.get('/webhook', (req, res) => {
-  if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === VERIFY_TOKEN) return res.status(200).send(req.query['hub.challenge']);
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+    return res.status(200).send(challenge);
+  }
   res.sendStatus(403);
 });
 
 app.post('/webhook', async (req, res) => {
   res.status(200).send('EVENT_RECEIVED');
+
   if (req.body.object === 'instagram') {
     for (const entry of req.body.entry) {
       if (entry.messaging) {
         for (const event of entry.messaging) {
-          const senderId = event.sender?.id;
+          const senderId = event.sender && event.sender.id;
           if (!senderId) continue;
 
-          // معالجة النصوص (الذكاء الاصطناعي الجديد)
-          if (event.message?.text) {
-            const aiReply = await getAvetaarAIResponse(event.message.text);
-            await sendReply(senderId, aiReply);
+          if (event.message && event.message.text) {
             await sendGenericTemplate(senderId);
             continue;
           }
 
-          // معالجة الريلز
-          if (event.message?.attachments) {
+          if (event.message && event.message.attachments) {
+            let reelFound = false;
             for (const attachment of event.message.attachments) {
-              if (attachment.type === 'ig_reel') {
-                const directUrl = await getMediaDirectUrl(attachment.payload.url);
-                if (directUrl) await sendInstagramReel(senderId, directUrl);
-                else await sendReply(senderId, "❌ تعذر تحميل المقطع.");
+              if (attachment.type === 'ig_reel' && attachment.payload && attachment.payload.url) {
+                reelFound = true;
+                await sendReply(senderId, "⏳ يتم معالجة واستخراج الريلز...");
+
+                try {
+                  const reelUrl = attachment.payload.url; 
+                  const directUrl = await getMediaDirectUrl(reelUrl);
+
+                  if (directUrl) {
+                    await sendInstagramReel(senderId, directUrl); 
+                  } else {
+                    await sendReply(senderId, "❌ عذراً، لم أتمكن من جلب هذا المقطع.");
+                  }
+                } catch (err) {
+                  await sendReply(senderId, "❌ وقع خطأ غير متوقع.");
+                }
                 break;
               }
             }
+            if (!reelFound) await sendReply(senderId, "🚨 المرفق غير مدعوم.");
           }
         }
       }
@@ -90,30 +98,52 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// --- الدوال ---
 async function sendGenericTemplate(recipientId) {
-    // كود القالب كما هو
+  try {
     await axios.post(`https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
       recipient: { id: recipientId },
-      message: { attachment: { type: "template", payload: { template_type: "generic", elements: [{ title: "مطور البوت 📲", image_url: "https://i.ibb.co/TBPXVL2K/photo-5872718112396872742-x.jpg", subtitle: "تواصل مع المطور", default_action: { type: "web_url", url: "https://wa.me/message/VTOVK35COW4RG1" }, buttons: [{ type: "web_url", url: "https://wa.me/message/VTOVK35COW4RG1", title: "تواصل" }] }] } } },
+      message: {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "generic",
+            elements: [{
+              title: " مطور البوت 📲",
+              image_url: "https://i.ibb.co/h1x9YLDV/26545.png",
+              subtitle: "تواصل مع مطور البوت فحال توقف 🛑",
+              default_action: { type: "web_url", url: "https://www.instagram.com/am_mo1_25_" },
+              buttons: [{ type: "web_url", url: "https://www.instagram.com/am_mo1_25_", title: "تواصل" }]
+            }]
+          }
+        }
+      },
       messaging_type: "RESPONSE"
-    }).catch(err => console.error(err.message));
+    });
+  } catch (err) { console.error("❌ خطأ:", err.message); }
 }
 
 async function sendInstagramReel(senderId, url) {
-    await axios.post(`https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+  try {
+    const sendResponse = await axios.post(`https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
       messaging_type: "RESPONSE",
       recipient: { id: senderId },
       message: { attachment: { type: "video", payload: { url: url } } }
-    }).then(() => sendGenericTemplate(senderId)).catch(err => console.error(err.message));
+    });
+    
+    if (sendResponse.status === 200) {
+      await sendGenericTemplate(senderId);
+    }
+  } catch (error) { console.error("❌ خطأ في إرسال الفيديو:", error.message); }
 }
 
 async function sendReply(recipientId, messageText) {
+  try {
     await axios.post(`https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
       recipient: { id: recipientId },
       message: { text: messageText },
       messaging_type: "RESPONSE"
-    }).catch(err => console.error(err.message));
+    });
+  } catch (err) { console.error("❌ فشل:", err.message); }
 }
 
 module.exports = app;

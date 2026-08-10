@@ -34,7 +34,7 @@ async function getMediaDirectUrl(reelUrl) {
     console.log("⏳ جاري استخراج الفيديو...");
 
     const response = await axios.get(apiUrl, {
-      timeout: 30000,
+      timeout: 10000,
       headers: {
         "Accept": "application/json"
       }

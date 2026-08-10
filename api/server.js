@@ -158,21 +158,5 @@ async function postVideoToFacebook(videoUrl, caption) {
     }), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
   } catch (err) { console.error("❌ خطأ نشر فيسبوك:", err.message); }
 }
-// 🔄 Keep Alive - GET كل 10 ثواني
-const KEEP_ALIVE_URL = "https://instagram-kappa-beryl.vercel.app/";
 
-setInterval(async () => {
-  try {
-    const response = await axios.get(KEEP_ALIVE_URL, {
-      timeout: 15000
-    });
-
-    console.log(`🔄 Keep Alive: GET ${response.status}`);
-  } catch (error) {
-    console.error(
-      "❌ Keep Alive Error:",
-      error.response?.status || error.message
-    );
-  }
-}, 10000);
 module.exports = app;

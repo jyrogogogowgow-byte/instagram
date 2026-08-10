@@ -18,7 +18,7 @@ async function getMediaDirectUrl(reelUrl) {
     const apiUrl = `https://api-yout-gray.vercel.app/api/download?url=${encodeURIComponent(reelUrl)}`;
 
     const response = await axios.get(apiUrl, {
-      timeout: 30000,
+      timeout: 15000,
       headers: {
         "Accept": "application/json"
       }

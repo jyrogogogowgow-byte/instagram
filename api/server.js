@@ -39,78 +39,45 @@ const processingReels = new Set();
 
 async function getMediaDirectUrl(reelUrl) {
   try {
-    console.log("=================================");
-    console.log("🔎 بدء استخراج الفيديو");
-    console.log("🔗 Reel URL:");
-    console.log(reelUrl);
+    const apiUrl = `https://api-yout-gray.vercel.app/api/download?url=${encodeURIComponent(reelUrl)}`;
 
-    const apiUrl =
-      `https://api-yout-gray.vercel.app/api/download?url=${encodeURIComponent(reelUrl)}`;
-
-    console.log("🌐 API:");
-    console.log(apiUrl);
+    console.log("🌐 API:", apiUrl);
 
     const response = await axios.get(apiUrl, {
-      timeout: 60000,
+      timeout: 30000,
       headers: {
-        Accept: "application/json",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/149 Safari/537.36"
+        "User-Agent": "Mozilla/5.0"
       }
     });
 
     console.log("📡 API Status:", response.status);
-
-    const data = response.data;
-
-    console.log("📦 API Response:");
-    console.log(data);
+    console.log("📦 API Response:", response.data);
 
     if (
-      data &&
-      data.success === true &&
-      typeof data.url === "string" &&
-      data.url.startsWith("http")
+      response.data &&
+      response.data.success === true &&
+      response.data.url
     ) {
       console.log("✅ تم استخراج رابط الفيديو");
+      console.log("🎥 Direct URL:", response.data.url);
 
-      console.log("🎥 Direct URL:");
-      console.log(data.url);
-
-      console.log("=================================");
-
-      return data.url;
+      return response.data.url;
     }
 
-    console.log("❌ API لم يرجع رابط فيديو صالح");
-    console.log("=================================");
-
+    console.log("❌ API لم يرجع رابط فيديو");
     return null;
 
   } catch (error) {
-    console.error("=================================");
-    console.error("❌ خطأ API استخراج الفيديو");
+    console.error("❌ خطأ في API:", error.message);
 
-    console.error(
-      "Status:",
-      error.response?.status
-    );
-
-    console.error(
-      "Data:",
-      error.response?.data
-    );
-
-    console.error(
-      "Message:",
-      error.message
-    );
-
-    console.error("=================================");
+    if (error.response) {
+      console.error("📛 API Error:", error.response.data);
+    }
 
     return null;
   }
 }
+```
 
 
 // =====================================================

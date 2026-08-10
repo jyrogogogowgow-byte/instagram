@@ -12,36 +12,40 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "ABCD1234";
 const FACEBOOK_PAGE_ID = process.env.FACEBOOK_PAGE_ID || "";
 const FACEBOOK_PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN || "";
 
-// 🛠️ جلب الرابط المباشر باستعمال API الجديد
+// 🛠️ دالة جلب الرابط المباشر بنفس منطق Python الخاص بك
 async function getMediaDirectUrl(reelUrl) {
-  try {
-    const apiUrl = `https://api-yout-gray.vercel.app/api/download?url=${encodeURIComponent(reelUrl)}`;
+  try {
+    const url = "https://api.downloadgram.org/media";
+    
+    const data = {
+      "url": reelUrl,
+      "v": "3",
+      "lang": "en"
+    };
 
-    const response = await axios.get(apiUrl, {
-      timeout: 15000,
-      headers: {
-        "Accept": "application/json"
-      }
-    });
+    const headers = {
+      "Referer": "https://downloadgram.org/",
+      "Content-Type": "application/x-www-form-urlencoded"
+    };
 
-    const data = response.data;
+    const response = await axios.post(url, new URLSearchParams(data).toString(), { headers });
+    const text = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
 
-    if (data && data.success === true && data.url) {
-      console.log("✅ تم استخراج رابط الفيديو");
-      return data.url;
-    }
+    // نفس الـ Regex الخاص بك
+    const match = text.match(/href=\\x22(https:\/\/[^\\"]+)/);
 
-    console.log("❌ API لم يرجع رابط الفيديو:", data);
-    return null;
-
-  } catch (error) {
-    console.error(
-      "❌ خطأ في الاتصال بـ API:",
-      error.response?.data || error.message
-    );
-    return null;
-  }
+    if (match && match[1]) {
+      return match[1];
+    } else {
+      console.log("❌ لم يتم العثور على الرابط");
+      return null;
+    }
+  } catch (error) {
+    console.error("❌ خطأ في الاتصال بـ DownloadGram:", error.message);
+    return null;
+  }
 }
+
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];

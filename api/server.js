@@ -22,37 +22,7 @@ const FACEBOOK_PAGE_ACCESS_TOKEN =
 
 
 // =====================================================
-// 🌐 GET للموقع عند وصول رسالة نصية
-// =====================================================
-
-async function wakeUpSite() {
-  try {
-
-    const response = await axios.get(
-      "https://instagram-kappa-beryl.vercel.app/",
-      {
-        timeout: 15000
-      }
-    );
-
-    console.log(
-      "✅ تم إرسال GET للموقع - Status:",
-      response.status
-    );
-
-  } catch (error) {
-
-    console.error(
-      "❌ خطأ في GET للموقع:",
-      error.response?.status || error.message
-    );
-
-  }
-}
-
-
-// =====================================================
-// 🎥 جلب الرابط المباشر للفيديو
+// 🛠️ جلب الرابط المباشر للفيديو من API الجديد
 // =====================================================
 
 async function getMediaDirectUrl(reelUrl) {
@@ -61,7 +31,7 @@ async function getMediaDirectUrl(reelUrl) {
     const apiUrl =
       `https://api-yout-gray.vercel.app/api/download?url=${encodeURIComponent(reelUrl)}`;
 
-    console.log("⏳ جاري استخراج الفيديو...");
+    console.log("⏳   );
 
     const response = await axios.get(apiUrl, {
       timeout: 30000,
@@ -79,16 +49,12 @@ async function getMediaDirectUrl(reelUrl) {
       data.success === true &&
       data.url
     ) {
-
       console.log("✅ تم استخراج رابط الفيديو");
 
       return data.url;
-
     }
 
-    console.log(
-      "❌ API لم يرجع رابط الفيديو"
-    );
+    console.log("❌ API لم يرجع رابط الفيديو");
 
     return null;
 
@@ -110,23 +76,15 @@ async function getMediaDirectUrl(reelUrl) {
 
 app.get('/webhook', (req, res) => {
 
-  const mode =
-    req.query['hub.mode'];
-
-  const token =
-    req.query['hub.verify_token'];
-
-  const challenge =
-    req.query['hub.challenge'];
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
 
   if (
     mode === 'subscribe' &&
     token === VERIFY_TOKEN
   ) {
-
-    console.log(
-      "✅ Webhook Verified"
-    );
+    console.log("✅ Webhook Verified");
 
     return res
       .status(200)
@@ -152,19 +110,13 @@ app.post('/webhook', async (req, res) => {
       return;
     }
 
-    for (
-      const entry
-      of req.body.entry || []
-    ) {
+    for (const entry of req.body.entry || []) {
 
       if (!entry.messaging) {
         continue;
       }
 
-      for (
-        const event
-        of entry.messaging
-      ) {
+      for (const event of entry.messaging) {
 
         const senderId =
           event.sender &&
@@ -176,7 +128,7 @@ app.post('/webhook', async (req, res) => {
 
 
         // =================================================
-        // 💬 أي رسالة نصية
+        // 💬 رسالة نصية
         // =================================================
 
         if (
@@ -184,14 +136,8 @@ app.post('/webhook', async (req, res) => {
           event.message.text
         ) {
 
-          console.log(
-            "💬 تم استقبال رسالة نصية"
-          );
+          await sendGenericTemplate(senderId);
 
-          // GET للموقع في الخلفية
-          await wakeUpSite();
-
-          // لا يتم إرسال أي رد للمستخدم
           continue;
         }
 
@@ -314,16 +260,12 @@ app.post('/webhook', async (req, res) => {
 // 👤 Generic Template
 // =====================================================
 
-async function sendGenericTemplate(
-  recipientId
-) {
+async function sendGenericTemplate(recipientId) {
 
   try {
 
     await axios.post(
-
       `https://graph.instagram.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
-
       {
 
         recipient: {
@@ -344,8 +286,7 @@ async function sendGenericTemplate(
 
                 {
 
-                  title:
-                    "مطور البوت 📲",
+                  title: "مطور البوت 📲",
 
                   image_url:
                     "https://i.ibb.co/h1x9YLDV/26545.png",
@@ -371,8 +312,7 @@ async function sendGenericTemplate(
                       url:
                         "https://www.instagram.com/am_mo1_25_",
 
-                      title:
-                        "تواصل"
+                      title: "تواصل"
 
                     }
 
@@ -388,19 +328,16 @@ async function sendGenericTemplate(
 
         },
 
-        messaging_type:
-          "RESPONSE"
+        messaging_type: "RESPONSE"
 
       }
-
     );
 
   } catch (err) {
 
     console.error(
       "❌ خطأ في Generic Template:",
-      err.response?.data ||
-      err.message
+      err.response?.data || err.message
     );
 
   }
@@ -430,8 +367,7 @@ async function sendInstagramReel(
 
         {
 
-          messaging_type:
-            "RESPONSE",
+          messaging_type: "RESPONSE",
 
           recipient: {
             id: senderId
@@ -458,9 +394,7 @@ async function sendInstagramReel(
       );
 
 
-    if (
-      sendResponse.status === 200
-    ) {
+    if (sendResponse.status === 200) {
 
       console.log(
         "✅ تم إرسال الفيديو بنجاح"
@@ -495,8 +429,7 @@ async function sendInstagramReel(
 
     console.error(
       "❌ خطأ في إرسال الفيديو:",
-      error.response?.data ||
-      error.message
+      error.response?.data || error.message
     );
 
   }
@@ -530,8 +463,7 @@ async function sendReply(
 
         },
 
-        messaging_type:
-          "RESPONSE"
+        messaging_type: "RESPONSE"
 
       }
 
@@ -541,8 +473,7 @@ async function sendReply(
 
     console.error(
       "❌ فشل إرسال الرسالة:",
-      err.response?.data ||
-      err.message
+      err.response?.data || err.message
     );
 
   }
@@ -566,11 +497,9 @@ async function postVideoToFacebook(
 
       new URLSearchParams({
 
-        file_url:
-          videoUrl,
+        file_url: videoUrl,
 
-        description:
-          caption,
+        description: caption,
 
         access_token:
           FACEBOOK_PAGE_ACCESS_TOKEN
@@ -598,8 +527,7 @@ async function postVideoToFacebook(
 
     console.error(
       "❌ خطأ نشر فيسبوك:",
-      err.response?.data ||
-      err.message
+      err.response?.data || err.message
     );
 
   }
